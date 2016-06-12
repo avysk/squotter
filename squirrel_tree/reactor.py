@@ -1,8 +1,15 @@
+"""
+Reactor: the object containing callbacks for trie.
+"""
 from abc import ABCMeta, abstractmethod
 
 
 class Reactor(object):
+    """
+    Reactor interface.
+    """
     __metaclass__ = ABCMeta
+
     @abstractmethod
     def delete_callback(self, parent, suffix):
         """
@@ -40,12 +47,19 @@ class Reactor(object):
         :return:
         """
 
+
 class EmptyReactor(Reactor):
+    """
+    Reactor which does nothing.
+    """
     def delete_callback(self, parent, suffix):
         pass
+
     def insert_callback(self, chain, value):
         pass
+
     def create_callback(self, chain):
         pass
+
     def move_callback(self, old_chain, old_key, new_chain, new_key):
         pass

@@ -1,3 +1,6 @@
+"""
+Basic implemntation of a trie, with callbacks.
+"""
 import collections
 from os.path import commonprefix
 
@@ -30,6 +33,11 @@ class Trie(collections.MutableMapping):
 
     @property
     def chain(self):
+        """
+        Return the chain of keys to this trie.
+        :return: The list containing sub-keys for all the tries from the root
+        to this trie.
+        """
         if self._parent:
             return self._parent.chain + [self._suffix]
         else:
@@ -37,10 +45,19 @@ class Trie(collections.MutableMapping):
 
     @property
     def has_content(self):
+        """
+        Has this trie a value assigned?
+        :return: True if there's a value assigned for the key of this trie,
+        False otherwise.
+        """
         return self._has_content
 
     @property
     def terminal(self):
+        """
+        Is this a terminal trie?
+        :return: True if it contains no sub-tries, False otherwise.
+        """
         return len(self._subtries) == 0
 
     def __getitem__(self, key):
@@ -127,14 +144,25 @@ class Trie(collections.MutableMapping):
         self._reactor.move_callback(self.chain, prefix,
                                     subtrie.chain, new_prefix)
 
-    def move(self, parent, suffix):
+    def move(self, parent, subkey):
+        """
+        Move this subtree to become a child of a given parent.
+        :param parent: New parent.
+        :param subkey: Subkey for a new parent.
+        :return: nothing
+        """
         self._parent = parent
-        self._suffix = suffix
-        self._parent.register_child(self, suffix)
+        self._suffix = subkey
+        self._parent.register_child(self, subkey)
 
-    def register_child(self, child, suffix):
-        assert suffix not in self._subtries
-        self._subtries[suffix] = child
+    def register_child(self, child, subkey):
+        """
+        Register a trie as a child.
+        :param child: A trie to add as a child.
+        :param subkey: Subkey to use for a child.
+        """
+        assert subkey not in self._subtries
+        self._subtries[subkey] = child
 
     def _add_intersecting(self, rkey, value, prefix, length):
         # First add a new subtrie

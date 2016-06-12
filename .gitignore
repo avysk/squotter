@@ -2,3 +2,6 @@
 .idea
 # Vim swap files
 .*.swp
+cover/
+.coverage
+squotter.egg-info/
