@@ -5,3 +5,4 @@
 cover/
 .coverage
 squotter.egg-info/
+*.pyc
