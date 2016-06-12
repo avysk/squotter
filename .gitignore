@@ -1,0 +1,4 @@
+# IntelliJ project files
+.idea
+# Vim swap files
+.*.swp

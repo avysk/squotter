@@ -1,0 +1,162 @@
+import collections
+from os.path import commonprefix
+
+from .reactor import EmptyReactor
+
+
+class Trie(collections.MutableMapping):
+    """
+    Implementation of Trie.
+
+    API:
+
+    Trie.root -- key for this Trie
+    Trie.terminal -- True if has no sub-Tries
+    Trie[key] -- get value for this Trie and sub-Tries
+
+    """
+    def __init__(self, parent=None, suffix=None, reactor=None):
+        # Key this Trie node represents w/respect to its parent
+        self._suffix = suffix or ''
+        self._parent = parent
+        # Sub-tries for this Trie node, indexed by their suffixes
+        self._subtries = {}
+        # Callback reactor
+        self._reactor = reactor or EmptyReactor()
+        # Content of this node
+        self._content = None
+        self._has_content = None
+        self._reactor.create_callback(self.chain)
+
+    @property
+    def chain(self):
+        if self._parent:
+            return self._parent.chain + [self._suffix]
+        else:
+            return [self._suffix]
+
+    @property
+    def has_content(self):
+        return self._has_content
+
+    @property
+    def terminal(self):
+        return len(self._subtries) == 0
+
+    def __getitem__(self, key):
+        return self._get_relative(key)
+
+    def _get_relative(self, rkey):
+        # If relative key is empty string, it's for the content of this node
+        if rkey == '':
+            if not self.has_content:
+                raise KeyError
+            return self._content
+
+        where_to = self._find_containing_prefix(rkey)
+        if not where_to:
+            raise KeyError
+
+        prefix, length = where_to
+
+        return self._subtries[prefix][rkey[length:]]
+
+    def _find_containing_prefix(self, rkey):
+        best = self._find_best_prefix(rkey)
+        if not best:
+            return None
+        prefix, length = best
+        if len(prefix) != length:
+            return None
+        return prefix, length
+
+    def _find_best_prefix(self, rkey):
+        for prefix in self._subtries.keys():
+            common = commonprefix([prefix, rkey])
+            if common:
+                return prefix, len(common)
+        return None
+
+    def __setitem__(self, key, value):
+        self._set_relative(key, value)
+
+    def _set_relative(self, rkey, value):
+        # If relative key is empty string, it's for the content of this node
+        if rkey == '':
+            self._content = value
+            self._has_content = True
+            self._reactor.insert_callback(self.chain, value)
+        else:
+            # Now we have four possibilities:
+            # 1. There's no subtrie with overlapping key
+            # 2. There's subtrie with key which starts with rkey
+            # 3. There's subtrie with key which is a start of rkey
+            # 4. There's subtrie with overlapping key
+            best = self._find_best_prefix(rkey)
+            if not best:
+                # Possibility 1
+                self._add_in_new_subtrie(rkey, value)
+            else:
+                prefix, length = best
+                if length == len(prefix):
+                    # Possibility 2
+                    self._subtries[prefix][rkey[length:]] = value
+                elif length == len(rkey):
+                    # Possibility 3
+                    self._add_over_subtree(rkey, value, prefix)
+                else:
+                    # Possibility 4
+                    self._add_intersecting(rkey, value, prefix, length)
+
+    def _add_in_new_subtrie(self, rkey, value):
+        new_subtrie = Trie(parent=self, suffix=rkey, reactor=self._reactor)
+        self._subtries[rkey] = new_subtrie
+        new_subtrie[''] = value
+
+    def _add_over_subtree(self, rkey, value, prefix):
+        # First add a new subtrie
+        self._add_in_new_subtrie(rkey, value)
+        self._move_subtree_down(prefix, rkey)
+
+    def _move_subtree_down(self, prefix, where_to):
+        subtrie = self._subtries[prefix]
+        new_prefix = prefix[len(where_to):]
+        new_parent = self._subtries[where_to]
+        subtrie.move(new_parent, new_prefix)
+        del self._subtries[prefix]
+        self._reactor.move_callback(self.chain, prefix,
+                                    subtrie.chain, new_prefix)
+
+    def move(self, parent, suffix):
+        self._parent = parent
+        self._suffix = suffix
+        self._parent.register_child(self, suffix)
+
+    def register_child(self, child, suffix):
+        assert suffix not in self._subtries
+        self._subtries[suffix] = child
+
+    def _add_intersecting(self, rkey, value, prefix, length):
+        # First add a new subtrie
+        intersection = rkey[:length]
+        assert intersection == prefix[:length]
+        assert intersection not in self._subtries
+        intersection_subtrie = Trie(parent=self, suffix=intersection,
+                                    reactor=self._reactor)
+        self._subtries[intersection] = intersection_subtrie
+        # Now move another subtrie under it
+        self._move_subtree_down(prefix, intersection)
+        # And proceed with adding value
+        intersection_subtrie[rkey[length:]] = value
+
+    def __delitem__(self, key):
+        raise NotImplementedError
+
+    def __iter__(self):
+        raise NotImplementedError
+
+    def __len__(self):
+        total = 1
+        for _, child in self._subtries.items():
+            total += len(child)
+        return total
