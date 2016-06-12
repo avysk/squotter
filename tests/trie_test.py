@@ -2,9 +2,10 @@
 Tests for trie implementation
 """
 
+from nose.tools import raises
+
 import squirrel_tree.trie
 
-from nose.tools import raises
 
 def trie_creation_smoke_test():
     """
@@ -20,23 +21,26 @@ def trie_creation_smoke_test():
     assert not trie.terminal
     assert trie['foo'] == 'bar'
 
+
 @raises(KeyError)
-def trie_no_content_exception_1_test():
+def trie_no_content_1_test():
     """
     Test KeyError exception when there's key but no content; for root
     """
     trie = squirrel_tree.trie.Trie()
-    trie['']
+    print trie['']
+
 
 @raises(KeyError)
-def trie_no_content_exception_2_test():
+def trie_no_content_2_test():
     """
     Test KeyError exception when there's key but no content; for created key
     """
     trie = squirrel_tree.trie.Trie()
     trie['foobar'] = 1
     trie['foobaz'] = 2
-    trie['foo']
+    print trie['foo']
+
 
 @raises(KeyError)
 def trie_no_key_exception_1_test():
@@ -46,7 +50,8 @@ def trie_no_key_exception_1_test():
     trie = squirrel_tree.trie.Trie()
     trie['foo'] = 1
     trie['bar'] = 2
-    trie['quux']
+    print trie['quux']
+
 
 @raises(KeyError)
 def trie_no_key_exception_2_test():
@@ -55,7 +60,8 @@ def trie_no_key_exception_2_test():
     """
     trie = squirrel_tree.trie.Trie()
     trie['foo'] = 1
-    trie['foobar']
+    print trie['foobar']
+
 
 @raises(KeyError)
 def trie_no_key_exception_3_test():
@@ -64,7 +70,8 @@ def trie_no_key_exception_3_test():
     """
     trie = squirrel_tree.trie.Trie()
     trie['foobar'] = 1
-    trie['foo']
+    print trie['foo']
+
 
 def trie_add_longer_key_test():
     """
@@ -76,17 +83,16 @@ def trie_add_longer_key_test():
     assert trie['foo'] == 1
     assert trie['foobar'] == 2
     assert not trie.terminal
-    assert len(trie._subtries) == 1
-    foo_trie = trie._subtries['foo']
+    # Should have keys for '', 'foo' and 'bar'
+    assert len(trie) == 3
+    foo_trie = trie.get_subtrie('foo')
     assert not foo_trie.terminal
-    assert len(foo_trie._subtries) == 1
-    foobar_trie = foo_trie._subtries['bar']
+    foobar_trie = foo_trie.get_subtrie('bar')
     assert foobar_trie.terminal
     assert trie.chain == ['']
     assert foo_trie.chain == ['', 'foo']
-    assert foo_trie._suffix == 'foo'
     assert foobar_trie.chain == ['', 'foo', 'bar']
-    assert foobar_trie._suffix == 'bar'
+
 
 def trie_add_shorter_key_test():
     """
@@ -103,10 +109,13 @@ def trie_add_shorter_key_test():
     trie['foobar_a'] = 'a'
     trie['foobar_b'] = 'b'
     trie['foobar_c'] = 'c'
+    # Should have keys for '', 'foobar', '_', 'a', 'b', 'c' and 'barbaz'
+    assert len(trie) == 7
     # Now insert key foo, the result should be
     # '' -> foo -> foobar -> foobar_{a, b, c}
     #    -> barbaz
     trie['foo'] = 3
+    assert len(trie) == 8
     assert trie[''] == 'root'
     assert trie['foobar'] == 1
     assert trie['barbaz'] == 2
@@ -114,17 +123,12 @@ def trie_add_shorter_key_test():
     assert trie['foobar_b'] == 'b'
     assert trie['foobar_c'] == 'c'
     assert trie['foo'] == 3
-    assert len(trie._subtries) == 2
-    foo_trie = trie._subtries['foo']
-    assert len(foo_trie._subtries) == 1
-    foobar_trie = foo_trie._subtries['bar']
-    assert len(foobar_trie._subtries) == 1
-    foobar_1_trie = foobar_trie._subtries['_']
-    subtries = foobar_1_trie._subtries
-    assert len(subtries) == 3
-    a_trie = subtries['a']
-    b_trie = subtries['b']
-    c_trie = subtries['c']
+    foo_trie = trie.get_subtrie('foo')
+    foobar_trie = foo_trie.get_subtrie('bar')
+    foobar_1_trie = foobar_trie.get_subtrie('_')
+    a_trie = foobar_1_trie.get_subtrie('a')
+    b_trie = foobar_1_trie.get_subtrie('b')
+    c_trie = foobar_1_trie.get_subtrie('c')
     assert a_trie.terminal
     assert b_trie.terminal
     assert c_trie.terminal
@@ -134,4 +138,3 @@ def trie_add_shorter_key_test():
     assert a_trie.chain == ['', 'foo', 'bar', '_', 'a']
     assert b_trie.chain == ['', 'foo', 'bar', '_', 'b']
     assert c_trie.chain == ['', 'foo', 'bar', '_', 'c']
-

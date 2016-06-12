@@ -60,6 +60,14 @@ class Trie(collections.MutableMapping):
         """
         return len(self._subtries) == 0
 
+    def get_subtrie(self, rkey):
+        """
+        Get subtrie of this trie, corresponding to the given relative key.
+        :param key:
+        :return:
+        """
+        return self._subtries[rkey]
+
     def __getitem__(self, key):
         return self._get_relative(key)
 
