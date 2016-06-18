@@ -1,6 +1,5 @@
-"""
-Basic implemntation of a trie, with callbacks.
-"""
+"""Basic implemntation of a trie, with callbacks."""
+
 import collections
 from os.path import commonprefix
 
@@ -8,6 +7,7 @@ from .reactor import EmptyReactor
 
 
 class Trie(collections.MutableMapping):
+
     """
     Implementation of Trie.
 
@@ -16,12 +16,24 @@ class Trie(collections.MutableMapping):
     Trie.root -- key for this Trie
     Trie.terminal -- True if has no sub-Tries
     Trie[key] -- get value for this Trie and sub-Tries
-
     """
+
     def __init__(self, parent=None, suffix=None, reactor=None):
+        """
+        Create a new trie.
+
+        :param parent: Parent of this trie. By default root trie is created.
+        :param suffix: Suffix of this trie w/respect to the parent. By default
+               empty string. Should be non-empty if parent is given.
+        :param reactor: Implementation of squirrel_trie.Reactor. Trie
+               operations will call the corresponding callbacks of the reactor.
+               By default squirrel_trie.EmptyReactor.
+        """
         # Key this Trie node represents w/respect to its parent
         self._suffix = suffix or ''
         self._parent = parent
+        if not len(self._suffix) and self._parent:
+            raise ValueError("Only root trie may have empty suffix.")
         # Sub-tries for this Trie node, indexed by their suffixes
         self._subtries = {}
         # Callback reactor
@@ -75,12 +87,12 @@ class Trie(collections.MutableMapping):
         # If relative key is empty string, it's for the content of this node
         if rkey == '':
             if not self.has_content:
-                raise KeyError
+                raise KeyError("No content in requested key.")
             return self._content
 
         where_to = self._find_containing_prefix(rkey)
         if not where_to:
-            raise KeyError
+            raise KeyError("No requested key.")
 
         prefix, length = where_to
 
