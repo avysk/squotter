@@ -1,6 +1,4 @@
-"""
-Tests for trie implementation
-"""
+"""Tests for trie implementation."""
 
 from nose import with_setup
 from nose.tools import raises
@@ -11,14 +9,16 @@ from squirrel_tree.reactor import Reactor
 
 
 class Test(object):
-    """Tests for squirrel_tree.trie.Trie"""
+
+    """Tests for squirrel_tree.trie.Trie."""
 
     def __init__(self):
+        """Test initialisation."""
         self._reactor = None
         self._trie = None
 
     def setup(self):
-        """Create a mock reactor and Trie which uses it"""
+        """Create a mock reactor and Trie which uses it."""
         self._reactor = Mock(Reactor)
         self._trie = squirrel_tree.trie.Trie(reactor=self._reactor)
         self._reactor.create_callback.assert_called_once_with([''])
@@ -28,7 +28,7 @@ class Test(object):
         self._reactor.reset_mock()
 
     def teardown(self):
-        """Assert that all reactor calls were checked in test"""
+        """Assert that all reactor calls were checked in test."""
         assert self._reactor.method_calls == [], "Unchecked reactor calls left"
         self._trie = None
         self._reactor = None
@@ -36,6 +36,7 @@ class Test(object):
     def _check_reactor(self, *expected):
         """
         Assert that the reactor was called with expected chain of actions.
+
         :param expected: list of pairs [action, args]
                action is one of 'insert', 'create', 'delete' or 'move'
                args is an iterable of expected arguments for the corresponding
@@ -53,9 +54,7 @@ class Test(object):
 
     @with_setup(setup, teardown)
     def trie_creation_smoke_test(self):
-        """
-        Trie smoke test
-        """
+        """Trie smoke test."""
         trie = self._trie
         assert trie.chain == ['']
         assert trie.terminal
@@ -74,18 +73,14 @@ class Test(object):
     @with_setup(setup, teardown)
     @raises(KeyError)
     def trie_no_content_1_test(self):
-        """
-        Test KeyError exception when there's key but no content; for root
-        """
+        """Test KeyError exception when there's no content; for root."""
         trie = self._trie
         assert not trie['']
 
     @with_setup(setup, teardown)
     @raises(KeyError)
     def trie_no_content_2_test(self):
-        """
-        Test KeyError exception when there's key but no content for this key
-        """
+        """Test KeyError exception when there's no content for created key."""
         trie = self._trie
         trie['foobar'] = 1
         self._check_reactor(
@@ -108,16 +103,14 @@ class Test(object):
     @with_setup(setup, teardown)
     @raises(KeyError)
     def trie_no_key_exception_1_test(self):
-        """
-        Test KeyError when there's no key at all.
-        """
+        """Test KeyError when there's no key at all."""
         self._trie['foo'] = 1
         self._trie['bar'] = 2
         self._check_reactor(
             # Create trie for 'foo' and insert value
             ['create', (['', 'foo'],)],
             ['insert', (['', 'foo'], 1)],
-            # Create trie for 'bar' and insertr value
+            # Create trie for 'bar' and insert value
             ['create', (['', 'bar'],)],
             ['insert', (['', 'bar'], 2)]
         )
@@ -126,9 +119,7 @@ class Test(object):
     @with_setup(setup, teardown)
     @raises(KeyError)
     def trie_no_key_exception_2_test(self):
-        """
-        Test KeyError when there's only shorter key.
-        """
+        """Test KeyError when there's only shorter key."""
         self._trie['foo'] = 1
         self._check_reactor(
             # Create trie for 'foo' and insert value
@@ -140,9 +131,7 @@ class Test(object):
     @with_setup(setup, teardown)
     @raises(KeyError)
     def trie_no_key_exception_3_test(self):
-        """
-        Test KeyError when there's only longer key.
-        """
+        """Test KeyError when there's only longer key."""
         self._trie['foobar'] = 1
         self._check_reactor(
             # Create trie for 'foobar' and insert value
@@ -153,9 +142,7 @@ class Test(object):
 
     @with_setup(setup, teardown)
     def trie_add_longer_key_test(self):
-        """
-        Test addition of key longer than one in a trie.
-        """
+        """Test addition of key longer than one in a trie."""
         self._trie['foo'] = 1
         self._trie['foobar'] = 2
         self._check_reactor(
@@ -181,9 +168,7 @@ class Test(object):
 
     @with_setup(setup, teardown)
     def trie_add_shorter_key_test(self):
-        """
-        Test addition of shorter key than one in a trie.
-        """
+        """Test addition of shorter key than one in a trie."""
         # Original trie:
         #
         # '' -> foobar -> foobar_{a, b, c}
