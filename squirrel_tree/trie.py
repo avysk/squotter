@@ -150,7 +150,7 @@ class Trie(collections.MutableMapping):
         subtrie.move(new_parent, new_prefix)
         del self._subtries[prefix]
         self._reactor.move_callback(self.chain, prefix,
-                                    subtrie.chain, new_prefix)
+                                    new_parent.chain, new_prefix)
 
     def move(self, parent, subkey):
         """
