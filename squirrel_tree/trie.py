@@ -188,7 +188,8 @@ class Trie(collections.MutableMapping):
     def unregister_child(self, suffix):
         """
         Remove a child tree.
-        :param suffix:
+
+        :param suffix: Suffix for the child to be removed.
         """
         assert suffix in self._subtries
         del self._subtries[suffix]

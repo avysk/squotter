@@ -20,6 +20,7 @@ class Reactor(object):
     def delete_callback(self, chain, value):
         """
         Called when a value is deleted from trie.
+
         :param chain: chain to a value
         :param value: value being deleted
         """
