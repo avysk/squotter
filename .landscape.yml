@@ -1,0 +1,11 @@
+doc-warnings: yes
+test-warning: yes
+strictness: veryhigh
+max-line-length: 80
+autodetect: yes
+pep8:
+        full: true
+requirements:
+        - requirements.txt
+python-targets:
+        - 2
