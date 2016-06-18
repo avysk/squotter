@@ -8,6 +8,11 @@ import squirrel_tree.trie
 from squirrel_tree.reactor import Reactor
 
 
+NO_CONTENT_GET = 'No content in requested key (get).'
+NO_CONTENT_DEL = 'No content in requested key (del).'
+NO_KEY = 'No requested key.'
+
+
 class Test(object):
 
     """Tests for squirrel_tree.trie.Trie."""
@@ -23,7 +28,7 @@ class Test(object):
         self._trie = squirrel_tree.trie.Trie(reactor=self._reactor)
         self._reactor.create_callback.assert_called_once_with([''])
         self._reactor.insert_callback.assert_not_called()
-        self._reactor.delete_callback.assert_not_called()
+        self._reactor.remove_callback.assert_not_called()
         self._reactor.move_callback.assert_not_called()
         self._reactor.reset_mock()
 
@@ -38,12 +43,13 @@ class Test(object):
         Assert that the reactor was called with expected chain of actions.
 
         :param expected: list of pairs [action, args]
-               action is one of 'insert', 'create', 'delete' or 'move'
+               action is one of 'insert', 'create', 'remove' or 'move'
                args is an iterable of expected arguments for the corresponding
                     reactor callback.
         """
         to_call = {'insert': call.insert_callback,
                    'create': call.create_callback,
+                   'remove': call.remove_callback,
                    'delete': call.delete_callback,
                    'move': call.move_callback}
         chain = [to_call[action](*action_args)
@@ -89,7 +95,7 @@ class Test(object):
             trie = self._trie
             content = trie['']
             assert not content  # unreachable
-        eq_(context.exception.message, 'No content in requested key.')
+        eq_(context.exception.message, NO_CONTENT_GET)
         trie['foobar'] = 1
         self._check_reactor(
             # Create trie for 'foobar' and insert value there
@@ -110,7 +116,7 @@ class Test(object):
             trie = self._trie
             content = trie['fooba']
             assert not content  # unreachable
-        eq_(context.exception.message, 'No content in requested key.')
+        eq_(context.exception.message, NO_CONTENT_GET)
 
     @with_setup(setup, teardown)
     def trie_no_key_exception_1_test(self):
@@ -128,7 +134,7 @@ class Test(object):
         with assert_raises(KeyError) as context:
             content = self._trie['quux']
             assert not content  # unreachable
-        eq_(context.exception.message, 'No requested key.')
+        eq_(context.exception.message, NO_KEY)
 
     @with_setup(setup, teardown)
     def trie_no_key_exception_2_test(self):
@@ -142,7 +148,7 @@ class Test(object):
         with assert_raises(KeyError) as context:
             content = self._trie['foobar']
             assert not content  # unreachable
-        eq_(context.exception.message, 'No requested key.')
+        eq_(context.exception.message, NO_KEY)
 
     @with_setup(setup, teardown)
     def trie_no_key_exception_3_test(self):
@@ -156,7 +162,7 @@ class Test(object):
         with assert_raises(KeyError) as context:
             content = self._trie['foo']
             assert not content  # unreachable
-        eq_(context.exception.message, 'No requested key.')
+        eq_(context.exception.message, NO_KEY)
 
     @with_setup(setup, teardown)
     def trie_add_longer_key_test(self):
@@ -251,3 +257,183 @@ class Test(object):
         eq_(a_trie.chain, ['', 'foo', 'bar', '_', 'a'])
         eq_(b_trie.chain, ['', 'foo', 'bar', '_', 'b'])
         eq_(c_trie.chain, ['', 'foo', 'bar', '_', 'c'])
+
+    @with_setup(setup, teardown)
+    def trie_del_no_key_test(self):
+        """Test KeyError for deletion of non-existant key."""
+        trie = self._trie
+        trie['foo'] = 1
+        self._check_reactor(
+            # Create 'foo' and insert value
+            ['create', (['', 'foo'],)],
+            ['insert', (['', 'foo'], 1)]
+        )
+        with assert_raises(KeyError) as context:
+            del trie['bar']
+        eq_(context.exception.message, NO_KEY)
+        with assert_raises(KeyError) as context:
+            del trie['fo']
+        eq_(context.exception.message, NO_KEY)
+        with assert_raises(KeyError) as context:
+            del trie['fooo']
+        eq_(context.exception.message, NO_KEY)
+
+    @with_setup(setup, teardown)
+    def trie_del_no_content_test(self):
+        """Test KeyError for deletion of key without content."""
+        trie = self._trie
+        trie['foo'] = 1
+        trie['foobar'] = 2
+        trie['foobaz'] = 3
+        self._check_reactor(
+            # Create 'foo' and 'foo'->'bar' and insert values
+            ['create', (['', 'foo'],)],
+            ['insert', (['', 'foo'], 1)],
+            ['create', (['', 'foo', 'bar'],)],
+            ['insert', (['', 'foo', 'bar'], 2)],
+            # Create 'foo'->'b', move 'foo'->'bar' to 'foo'->'b'->'ar'
+            # create 'foo'->'b'->'az', insert value,
+            ['create', (['', 'foo', 'ba'],)],
+            ['move', (['', 'foo'], 'bar', ['', 'foo', 'ba'], 'r')],
+            ['create', (['', 'foo', 'ba', 'z'],)],
+            ['insert', (['', 'foo', 'ba', 'z'], 3)],
+        )
+        with assert_raises(KeyError) as context:
+            del trie['fooba']
+        eq_(context.exception.message, NO_CONTENT_DEL)
+
+    @with_setup(setup, teardown)
+    def trie_del_keeps_root_test(self):
+        """Test that del does not remove root."""
+        trie = self._trie
+        trie[''] = 1
+        eq_(trie[''], 1)
+        del trie['']
+        self._check_reactor(
+            # Only insert and delete happened, no remove
+            ['insert', ([''], 1)],
+            ['delete', ([''], 1)]
+        )
+
+    @with_setup(setup, teardown)
+    def trie_del_removes_content_test(self):
+        """Test that del removes content."""
+        trie = self._trie
+        trie['foo'] = 1
+        trie['foobar'] = 2
+        trie['foobaz'] = 3
+        self._check_reactor(
+            # Create 'foo' and 'foo'->'bar' and insert values
+            ['create', (['', 'foo'],)],
+            ['insert', (['', 'foo'], 1)],
+            ['create', (['', 'foo', 'bar'],)],
+            ['insert', (['', 'foo', 'bar'], 2)],
+            # Create 'foo'->'b', move 'foo'->'bar' to 'foo'->'b'->'ar'
+            # create 'foo'->'b'->'az', insert value,
+            ['create', (['', 'foo', 'ba'],)],
+            ['move', (['', 'foo'], 'bar', ['', 'foo', 'ba'], 'r')],
+            ['create', (['', 'foo', 'ba', 'z'],)],
+            ['insert', (['', 'foo', 'ba', 'z'], 3)],
+        )
+        trie['fooba'] = 4
+        self._check_reactor(
+            ['insert', (['', 'foo', 'ba'], 4)]
+        )
+        eq_(trie['fooba'], 4)
+        del trie['fooba']
+        self._check_reactor(
+            ['delete', (['', 'foo', 'ba'], 4)]
+        )
+        with assert_raises(KeyError) as context:
+            del trie['fooba']
+        eq_(context.exception.message, NO_CONTENT_DEL)
+
+    @with_setup(setup, teardown)
+    def trie_del_empty_terminal_test(self):
+        """Test that del removes empty terminal tries."""
+        trie = self._trie
+        trie[''] = 1
+        trie['foo'] = 2
+        trie['foobar'] = 3
+        assert not trie.get_subtrie('foo').terminal
+        del trie['foobar']
+        self._check_reactor(
+            ['insert', ([''], 1)],
+            ['create', (['', 'foo'],)],
+            ['insert', (['', 'foo'], 2)],
+            ['create', (['', 'foo', 'bar'],)],
+            ['insert', (['', 'foo', 'bar'], 3)],
+            ['delete', (['', 'foo', 'bar'], 3)],
+            ['remove', (['', 'foo', 'bar'],)]
+        )
+        assert trie.get_subtrie('foo').terminal
+        eq_(trie['foo'], 2)
+        with assert_raises(KeyError) as context:
+            content = trie['foobar']
+            assert not content  # unreachable
+        eq_(context.exception.message, NO_KEY)
+
+    @with_setup(setup, teardown)
+    def trie_del_joins_tries_test(self):
+        """Test that no-content one-child tries are got merged after del."""
+        trie = self._trie
+        # 'foo' -> 'quux'
+        #       -> 'bar' -> 'baz' -> 'aha'
+        #                         -> 'oho'
+        # Then we delete baz content -- nothing happens in structure
+        # Then we delete oho content -- should get the following
+        # 'foo' -> 'quux'
+        #       -> 'bar' -> 'bazaha'
+        trie['foo'] = 1
+        trie['fooquux'] = 2
+        trie['foobar'] = 3
+        trie['foobarbaz'] = 4
+        trie['foobarbazaha'] = 5
+        trie['foobarbazoho'] = 6
+        actions = []
+        for chain, value in [(['', 'foo'], 1),
+                             (['', 'foo', 'quux'], 2),
+                             (['', 'foo', 'bar'], 3),
+                             (['', 'foo', 'bar', 'baz'], 4),
+                             (['', 'foo', 'bar', 'baz', 'aha'], 5),
+                             (['', 'foo', 'bar', 'baz', 'oho'], 6)]:
+            actions.append(['create', (chain,)])
+            actions.append(['insert', (chain, value)])
+        self._check_reactor(*actions)
+
+        del trie['foobarbaz']
+        self._check_reactor(
+            ['delete', (['', 'foo', 'bar', 'baz'], 4)]
+        )
+        eq_(trie['foo'], 1)
+        eq_(trie['fooquux'], 2)
+        eq_(trie['foobar'], 3)
+        eq_(trie['foobarbazaha'], 5)
+        eq_(trie['foobarbazoho'], 6)
+        with assert_raises(KeyError) as context:
+            content = trie['foobarbaz']
+            assert not content  # unreachable
+        eq_(context.exception.message, NO_CONTENT_GET)
+        foobar_trie = trie.get_subtrie('foo').get_subtrie('bar')
+        assert foobar_trie.get_subtrie('baz')
+
+        del trie['foobarbazoho']
+        self._check_reactor(
+            ['delete', (['', 'foo', 'bar', 'baz', 'oho'], 6)],
+            ['remove', (['', 'foo', 'bar', 'baz', 'oho'],)],
+            ['move', (['', 'foo', 'bar', 'baz'], 'aha',
+                      ['', 'foo', 'bar'], 'bazaha')],
+            ['remove', (['', 'foo', 'bar', 'baz'],)]
+        )
+        eq_(trie['foo'], 1)
+        eq_(trie['fooquux'], 2)
+        eq_(trie['foobar'], 3)
+        eq_(trie['foobarbazaha'], 5)
+        with assert_raises(KeyError) as context:
+            content = trie['foobarbazoho']
+            assert not content  # unreachable
+        eq_(context.exception.message, NO_KEY)
+        foobar_trie = trie.get_subtrie('foo').get_subtrie('bar')
+        assert foobar_trie.get_subtrie('bazaha')
+        with assert_raises(KeyError):
+            foobar_trie.get_subtrie('baz')

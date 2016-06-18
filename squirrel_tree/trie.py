@@ -40,7 +40,7 @@ class Trie(collections.MutableMapping):
         self._reactor = reactor or EmptyReactor()
         # Content of this node
         self._content = None
-        self._has_content = None
+        self._has_content = False
         self._reactor.create_callback(self.chain)
 
     @property
@@ -91,24 +91,19 @@ class Trie(collections.MutableMapping):
         # If relative key is empty string, it's for the content of this node
         if rkey == '':
             if not self.has_content:
-                raise KeyError("No content in requested key.")
+                raise KeyError("No content in requested key (get).")
             return self._content
 
-        where_to = self._find_containing_prefix(rkey)
-        if not where_to:
-            raise KeyError("No requested key.")
-
-        prefix, length = where_to
-
+        prefix, length = self._find_containing_prefix(rkey)
         return self._subtries[prefix][rkey[length:]]
 
     def _find_containing_prefix(self, rkey):
         best = self._find_best_prefix(rkey)
         if not best:
-            return None
+            raise KeyError("No requested key.")
         prefix, length = best
         if len(prefix) != length:
-            return None
+            raise KeyError("No requested key.")
         return prefix, length
 
     def _find_best_prefix(self, rkey):
@@ -168,27 +163,36 @@ class Trie(collections.MutableMapping):
         self._reactor.move_callback(self.chain, prefix,
                                     new_parent.chain, new_prefix)
 
-    def move(self, parent, subkey):
+    def move(self, parent, suffix):
         """
         Move this subtree to become a child of a given parent.
 
         :param parent: New parent.
-        :param subkey: Subkey for a new parent.
+        :param suffix: Suffix with respect to new parent.
         :return: nothing
         """
         self._parent = parent
-        self._suffix = subkey
-        self._parent.register_child(self, subkey)
+        self._suffix = suffix
+        self._parent.register_child(self, suffix)
 
-    def register_child(self, child, subkey):
+    def register_child(self, child, suffix):
         """
         Register a trie as a child.
 
         :param child: A trie to add as a child.
-        :param subkey: Subkey to use for a child.
+        :param suffix: Suffix to use for a child.
         """
-        assert subkey not in self._subtries
-        self._subtries[subkey] = child
+        assert suffix not in self._subtries
+        self._subtries[suffix] = child
+
+    def unregister_child(self, suffix):
+        """
+        Remove a child tree.
+        :param suffix:
+        """
+        assert suffix in self._subtries
+        del self._subtries[suffix]
+        self._compact()
 
     def _add_intersecting(self, rkey, value, prefix, length):
         # First add a new subtrie
@@ -204,7 +208,43 @@ class Trie(collections.MutableMapping):
         intersection_subtrie[rkey[length:]] = value
 
     def __delitem__(self, key):
-        raise NotImplementedError
+        self._del_relative(key)
+
+    def _del_relative(self, rkey):
+        # If relative key is empty string, it's for the content of this node
+        if rkey == '':
+            if not self._has_content:
+                raise KeyError("No content in requested key (del).")
+            self._has_content = False
+            self._reactor.delete_callback(self.chain, self._content)
+            self._content = None
+            self._compact()
+        else:
+            prefix, length = self._find_containing_prefix(rkey)
+            del self._subtries[prefix][rkey[length:]]
+
+    def _compact(self):
+        if self.has_content:
+            # Do not compact trie with content
+            return
+        if self._suffix == '':
+            # Do not compact the root
+            return
+        if len(self._subtries) == 0:
+            # No content and no subtries => just remove this trie
+            self._reactor.remove_callback(self.chain)
+            self._parent.unregister_child(self._suffix)
+        elif len(self._subtries) == 1:
+            # No content, one child only. We need to join this trie with
+            # the child.
+            suffix = self._subtries.keys()[0]
+            child = self._subtries[suffix]
+            new_suffix = self._suffix + suffix
+            child.move(self._parent, new_suffix)
+            self._reactor.move_callback(self.chain, suffix,
+                                        self._parent.chain, new_suffix)
+            self._reactor.remove_callback(self.chain)
+            self._parent.unregister_child(self._suffix)
 
     def __iter__(self):
         raise NotImplementedError

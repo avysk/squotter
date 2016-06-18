@@ -9,13 +9,19 @@ class Reactor(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def delete_callback(self, parent, suffix):
+    def remove_callback(self, chain):
         """
         Called when a terminal key is completely removed.
 
-        :param parent: The parent of suffix to be removed
-        :param key:  The suffix which is removed.
+        :param chain: The chain from which the last element is removed
         :return: nothing
+        """
+
+    def delete_callback(self, chain, value):
+        """
+        Called when a value is deleted from trie.
+        :param chain: chain to a value
+        :param value: value being deleted
         """
 
     @abstractmethod
@@ -52,7 +58,7 @@ class EmptyReactor(Reactor):
 
     """Reactor which does nothing."""
 
-    def delete_callback(self, parent, suffix):
+    def remove_callback(self, chain):
         """Do nothing."""
         pass
 
@@ -65,5 +71,9 @@ class EmptyReactor(Reactor):
         pass
 
     def move_callback(self, old_chain, old_key, new_chain, new_key):
+        """Do nothing."""
+        pass
+
+    def delete_callback(self, chain, value):
         """Do nothing."""
         pass
