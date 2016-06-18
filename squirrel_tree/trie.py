@@ -47,6 +47,7 @@ class Trie(collections.MutableMapping):
     def chain(self):
         """
         Return the chain of keys to this trie.
+
         :return: The list containing sub-keys for all the tries from the root
         to this trie.
         """
@@ -58,7 +59,8 @@ class Trie(collections.MutableMapping):
     @property
     def has_content(self):
         """
-        Has this trie a value assigned?
+        Check if this trie has a value assigned to it.
+
         :return: True if there's a value assigned for the key of this trie,
         False otherwise.
         """
@@ -67,7 +69,8 @@ class Trie(collections.MutableMapping):
     @property
     def terminal(self):
         """
-        Is this a terminal trie?
+        Check if trie is a terminal trie.
+
         :return: True if it contains no sub-tries, False otherwise.
         """
         return len(self._subtries) == 0
@@ -75,8 +78,9 @@ class Trie(collections.MutableMapping):
     def get_subtrie(self, rkey):
         """
         Get subtrie of this trie, corresponding to the given relative key.
-        :param key:
-        :return:
+
+        :param rkey: relative subkey
+        :return: subtrie corresponding to the given subkey
         """
         return self._subtries[rkey]
 
@@ -167,6 +171,7 @@ class Trie(collections.MutableMapping):
     def move(self, parent, subkey):
         """
         Move this subtree to become a child of a given parent.
+
         :param parent: New parent.
         :param subkey: Subkey for a new parent.
         :return: nothing
@@ -178,6 +183,7 @@ class Trie(collections.MutableMapping):
     def register_child(self, child, subkey):
         """
         Register a trie as a child.
+
         :param child: A trie to add as a child.
         :param subkey: Subkey to use for a child.
         """

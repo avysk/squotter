@@ -53,13 +53,17 @@ class EmptyReactor(Reactor):
     """Reactor which does nothing."""
 
     def delete_callback(self, parent, suffix):
+        """Do nothing."""
         pass
 
     def insert_callback(self, chain, value):
+        """Do nothing."""
         pass
 
     def create_callback(self, chain):
+        """Do nothing."""
         pass
 
     def move_callback(self, old_chain, old_key, new_chain, new_key):
+        """Do nothing."""
         pass
