@@ -1,4 +1,6 @@
-test: check
+test: check test0
+
+test0:
 	@python setup.py nosetests --with-coverage --cover-erase --cover-package=squirrel_tree --cover-html
 
 check:
@@ -15,4 +17,4 @@ clean:
 	rm -rf cover .coverage dist *.egg-info build
 	find . -name '*.pyc' -delete
 
-.PHONY: check test dist clean
+.PHONY: check test test0 dist clean
