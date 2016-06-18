@@ -15,4 +15,4 @@ clean:
 	rm -rf cover .coverage dist *.egg-info build
 	find . -name '*.pyc' -delete
 
-.PHOny: check test dist clean
+.PHONY: check test dist clean
