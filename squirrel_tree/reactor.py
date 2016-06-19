@@ -89,21 +89,26 @@ class CompositeReactor(Reactor):
         self._reactors = reactor_list
 
     def insert_callback(self, chain, value):
+        """Call insert_callback of subreactors."""
         for reactor in self._reactors:
             reactor.insert_callback(chain, value)
 
     def remove_callback(self, chain):
+        """Call remove_callback of subreactors."""
         for reactor in self._reactors:
             reactor.remove_callback(chain)
 
     def delete_callback(self, chain, value):
+        """Call delete_callback of subreactors."""
         for reactor in self._reactors:
             reactor.delete_callback(chain, value)
 
     def move_callback(self, old_chain, old_key, new_chain, new_key):
+        """Call move_callback of subreactors."""
         for reactor in self._reactors:
             reactor.move_callback(old_chain, old_key, new_chain, new_key)
 
     def create_callback(self, chain):
+        """Call create_callback of subreactors."""
         for reactor in self._reactors:
             reactor.create_callback(chain)
