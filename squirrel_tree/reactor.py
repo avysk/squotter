@@ -17,6 +17,7 @@ class Reactor(object):
         :return: nothing
         """
 
+    @abstractmethod
     def delete_callback(self, chain, value):
         """
         Called when a value is deleted from trie.
@@ -78,3 +79,31 @@ class EmptyReactor(Reactor):
     def delete_callback(self, chain, value):
         """Do nothing."""
         pass
+
+
+class CompositeReactor(Reactor):
+
+    """Reactor which calls callbacks from the given set of sub-reactors."""
+
+    def __init__(self, reactor_list):
+        self._reactors = reactor_list
+
+    def insert_callback(self, chain, value):
+        for reactor in self._reactors:
+            reactor.insert_callback(chain, value)
+
+    def remove_callback(self, chain):
+        for reactor in self._reactors:
+            reactor.remove_callback(chain)
+
+    def delete_callback(self, chain, value):
+        for reactor in self._reactors:
+            reactor.delete_callback(chain, value)
+
+    def move_callback(self, old_chain, old_key, new_chain, new_key):
+        for reactor in self._reactors:
+            reactor.move_callback(old_chain, old_key, new_chain, new_key)
+
+    def create_callback(self, chain):
+        for reactor in self._reactors:
+            reactor.create_callback(chain)
