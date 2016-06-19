@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/avysk/squotter.png?label=ready&title=Ready)](https://waffle.io/avysk/squotter)
 # Squotter
 
 Squotter is a tool to organise the collection of book quotes as a gopher directory.
