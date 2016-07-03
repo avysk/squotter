@@ -1,11 +1,14 @@
 """Tests for FileReactor."""
 
+import os
 import os.path
 import shutil
+import sys
 import tempfile
 
-from nose.tools import assert_equal, assert_false, assert_true
-from nose import with_setup
+from mock import patch
+from nose.tools import assert_equal, assert_raises_regexp,\
+    assert_false, assert_true
 
 from squirrel_tree.reactor import FileReactor
 from squirrel_tree.trie import Trie
@@ -43,17 +46,14 @@ class Test(object):
         shutil.rmtree(self._pool)
         self._pool = None
 
-    @with_setup(setup, teardown)
     def copy_smoke_test(self):
         """Test all basic operations of FileReactor using copy method."""
         self._smoke('copy')
 
-    @with_setup(setup, teardown)
     def hardlink_smoke_test(self):
         """Test all basic operations of FileReactor using hardlink method."""
         self._smoke('hardlink')
 
-    @with_setup(setup, teardown)
     def symlink_smoke_test(self):
         """Test all basic operations of FileReactor using symlink method."""
         self._smoke('symlink')
@@ -164,3 +164,72 @@ class Test(object):
         # Reset the content of the file in hierarchical filesystem
         with open(faile, 'w') as faile_w:
             faile_w.write(self._contents[fname])
+
+    def unknown_method_test(self):
+        """Test that FileReactor raises exception for unknown method."""
+        # pylint: disable=no-self-use
+        def _fail():
+            return FileReactor('', method='gnusto')
+        assert_raises_regexp(ValueError,
+                             r"^Acceptable methods are:.*$",
+                             _fail)
+
+    def unsupported_method_test(self):
+        """Test that FileReactor raises exception for unsupported method."""
+        # pylint: disable=no-self-use
+        def _fail(method):
+            def _callable(method=method):
+                link = None
+                link_patched = False
+                try:
+                    if hasattr(os, method):
+                        link = getattr(os, method)
+                        delattr(os, method)
+                        link_patched = True
+                    return FileReactor('', method=method)
+                except:
+                    if link_patched:
+                        os.link = link
+                    raise
+            return _callable
+
+        assert_raises_regexp(ValueError,
+                             r"^hardlink is not supported on this platform.",
+                             _fail('hardlink'))
+        assert_raises_regexp(ValueError,
+                             r"^symlink is not supported on this platform.",
+                             _fail('symlink'))
+
+    def improper_root_test(self):
+        """Test that FileReactor raises exception for bad root directory."""
+        def _no_root():
+            return FileReactor('quux', method='copy')
+        assert_raises_regexp(ValueError,
+                             r"^.*quux is not a directory$",
+                             _no_root)
+
+        def _no_writable_root():
+            root = os.path.join(self._root, 'foobar')
+            os.mkdir(root, 0o500)  # r-x------
+            try:
+                if sys.platform == 'win32':
+                    # I don't know how to create read-only dir on Windows
+                    # mode in mkdir is ignored, and chmod doesn't help
+                    with patch('os.access', return_value=False):
+                        return FileReactor(root, method='copy')
+                else:
+                    return FileReactor(root, method='copy')
+            except:
+                os.chmod(root, 0o700)  # rwx------
+                raise
+        assert_raises_regexp(ValueError,
+                             r"^.*foobar is not writable$",
+                             _no_writable_root)
+
+        def _no_pool():
+            pool = os.path.join(self._pool, 'barbaz')
+            open(pool, 'w').close()
+            return FileReactor(self._root, pool_dir=pool, method='copy')
+        assert_raises_regexp(ValueError,
+                             r"^.*barbaz is not a directory",
+                             _no_pool)
