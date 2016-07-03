@@ -35,22 +35,36 @@ class Test(object):
         self._pool = None
 
     @with_setup(setup, teardown)
-    def smoke_test(self):
-        """Test all basic operations of FileReactor."""
-        for method in ['copy', 'hardlink', 'symlink']:
-            if method == 'hardlink' and 'link' not in dir(os):
-                # cannot test hardlinks
-                continue
-            if method == 'symlink' and 'symlink' not in dir(os):
-                # cannot test symlinks
-                continue
-            reactor = FileReactor(root_dir=self._root,
-                                  pool_dir=self._pool,
-                                  method=method)
-            trie = Trie(reactor=reactor)
-            trie['a'] = ['foo']
-            trie['ab'] = ['bar']
-            trie['abc'] = ['foo', 'bar', 'quux']
-            trie['ad'] = ['baz']
-            trie['abc'] = ['bar', 'baz']
-            del trie['ad']
+    def copy_smoke_test(self):
+        """Test all basic operations of FileReactor using copy method"""
+        self._smoke('copy')
+
+    @with_setup(setup, teardown)
+    def hardlink_smoke_test(self):
+        """Test all basic operations of FileReactor using hardlink method"""
+        self._smoke('hardlink')
+
+    @with_setup(setup, teardown)
+    def symlink_smoke_test(self):
+        """Test all basic operations of FileReactor using symlink method"""
+        self._smoke('symlink')
+
+    def _smoke(self, method):
+        if method == 'hardlink' and 'link' not in dir(os):
+            # cannot test hardlinks
+            assert True
+            return
+        if method == 'symlink' and 'symlink' not in dir(os):
+            # cannot test symlinks
+            assert True
+            return
+        reactor = FileReactor(root_dir=self._root,
+                              pool_dir=self._pool,
+                              method=method)
+        trie = Trie(reactor=reactor)
+        trie['a'] = ['foo']
+        trie['ab'] = ['bar']
+        trie['abc'] = ['foo', 'bar', 'quux']
+        trie['ad'] = ['baz']
+        trie['abc'] = ['bar', 'baz']
+        del trie['ad']
