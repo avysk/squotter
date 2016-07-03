@@ -219,10 +219,8 @@ class FileReactor(Reactor):
         """
         dst_path = self._to_path(chain)
         # First make sure we have all needed files
-        needed = set()
         for fname in value:
             dst = os.path.join(dst_path, fname)
-            needed.add(os.path.abspath(dst))
             if os.path.exists(dst):
                 continue
             src = os.path.join(self._pool, fname)
@@ -230,13 +228,13 @@ class FileReactor(Reactor):
         # Now make sure we remove extra files
         to_remove = [fname for fname in os.listdir(dst_path)
                      # collect everything that is file
-                     if os.path.isfile(fname) and
+                     if os.path.isfile(os.path.join(dst_path, fname)) and
                      # which does not belong
-                     os.path.abspath(fname) not in needed and
+                     fname not in value and
                      # and not ignored
                      self._not_ignored(fname)]
         for fname in to_remove:
-            os.unlink(fname)
+            os.unlink(os.path.join(dst_path, fname))
 
     def create_callback(self, chain):
         """

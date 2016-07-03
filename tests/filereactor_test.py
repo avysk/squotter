@@ -91,8 +91,6 @@ class Test(object):
                                                    'bar': None,
                                                    'quux': None}},
                                        'd': {'baz': None}}})
-        # Setting new value does not delete the old one!
-        del trie['abc']
         trie['abc'] = ['bar', 'baz']
         self._assert_fs(method, {'a': {'foo': None,
                                        'b': {'bar': None,
