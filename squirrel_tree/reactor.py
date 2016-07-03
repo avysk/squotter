@@ -92,6 +92,13 @@ class CompositeReactor(Reactor):
     """Reactor which calls callbacks from the given set of sub-reactors."""
 
     def __init__(self, reactor_list):
+        """
+        Create Composite reactor.
+
+        :param reactor_list: When callback of CompositeReactor is called,
+               callbacks of the given reactors will be called in the order they
+               are specified in the list.
+        """
         self._reactors = reactor_list
 
     def insert_callback(self, chain, value):
@@ -145,7 +152,6 @@ class FileReactor(Reactor):
         :param ignore_regex: regex specifying files not to be removed on
                value change.
         """
-
         methods = {'copy': shutil.copyfile,
                    'hardlink': getattr(os, 'link', None),
                    'symlink': getattr(os, 'symlink', None)}
@@ -180,12 +186,16 @@ class FileReactor(Reactor):
         """
         rem_path = self._to_path(chain)
         assert os.path.isdir(rem_path),\
-            "Requested removal of non-existant dir {}".format(rem_path)
+            "Requested removal of non-existent dir {}".format(rem_path)
         shutil.rmtree(rem_path)
 
     def delete_callback(self, chain, value):
         """
-        Remove value from hierarchical filesystem.
+        Remove file from hierarchical filesystem.
+
+        :param chain: the list of path components to the subdirectory where
+               the value to be removed is.
+        :param chain: the file to remove.
 
         Warning: on Windows files in use may cause problems!
         """
@@ -193,10 +203,20 @@ class FileReactor(Reactor):
         for fname in value:
             del_fname = os.path.join(del_path, fname)
             assert os.path.isfile(del_fname),\
-                "Requested removal of non-exstant file {}".format(del_fname)
+                "Requested removal of non-existent file {}".format(del_fname)
             os.unlink(del_fname)
 
     def insert_callback(self, chain, value):
+        """
+        Insert the given file into hierarchical filesystem.
+
+        The actual insertion is done by the method specified at construction
+        time of FileReactor: copying, symlinking or hardlinking.
+
+        :param chain: the list of path components to the subdirectory in which
+               the value is to be inserted.
+        :param value: filename to insert into hierarchical filesystem.
+        """
         dst_path = self._to_path(chain)
         # First make sure we have all needed files
         needed = set()
@@ -219,6 +239,12 @@ class FileReactor(Reactor):
             os.unlink(fname)
 
     def create_callback(self, chain):
+        """
+        Create subdirectory in a hirerachical filesystem.
+
+        :param chain: the list of path components to the subdirectory to be
+               created.
+        """
         if chain == ['']:
             # No need to create root
             return
@@ -228,6 +254,16 @@ class FileReactor(Reactor):
         os.mkdir(cr_path)
 
     def move_callback(self, old_chain, old_key, new_chain, new_key):
+        """
+        Move part of hierarchical filesystem.
+
+        :param old_chain: the list of path components to the directory where
+               the old part was located.
+        :param old_key: the filename of the part to be moved.
+        :param new_chain: the list of path components to the directory where
+               the old part should be moved to.
+        :param new_key: the filename to name the part after the move.
+        """
         src = os.path.join(self._to_path(old_chain), old_key)
         dst = os.path.join(self._to_path(new_chain), new_key)
         shutil.move(src, dst)

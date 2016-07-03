@@ -36,17 +36,17 @@ class Test(object):
 
     @with_setup(setup, teardown)
     def copy_smoke_test(self):
-        """Test all basic operations of FileReactor using copy method"""
+        """Test all basic operations of FileReactor using copy method."""
         self._smoke('copy')
 
     @with_setup(setup, teardown)
     def hardlink_smoke_test(self):
-        """Test all basic operations of FileReactor using hardlink method"""
+        """Test all basic operations of FileReactor using hardlink method."""
         self._smoke('hardlink')
 
     @with_setup(setup, teardown)
     def symlink_smoke_test(self):
-        """Test all basic operations of FileReactor using symlink method"""
+        """Test all basic operations of FileReactor using symlink method."""
         self._smoke('symlink')
 
     def _smoke(self, method):
