@@ -228,7 +228,7 @@ class Test(object):
                              _no_pool)
 
     def ignore_regex_test(self):
-        """Test that ignore_regex is treated properly"""
+        """Test that ignore_regex is treated properly."""
         reactor = FileReactor(root_dir=self._root,
                               pool_dir=self._pool,
                               method='copy',
