@@ -226,3 +226,23 @@ class Test(object):
         assert_raises_regexp(ValueError,
                              r"^.*barbaz is not a directory",
                              _no_pool)
+
+    def ignore_regex_test(self):
+        """Test that ignore_regex is treated properly"""
+        reactor = FileReactor(root_dir=self._root,
+                              pool_dir=self._pool,
+                              method='copy',
+                              ignore_regex=".*d.*n.*ve.*")
+        trie = Trie(reactor=reactor)
+        trie['a'] = ['foo']
+        trie['ab'] = ['bar', 'baz']
+        key_ab = os.path.join(self._root, 'a', 'b')
+        to_keep = os.path.join(key_ab, "file_do_not_remove_blah")
+        to_remove = os.path.join(key_ab, "file_do_remove_blah")
+        open(to_keep, 'w').close()
+        open(to_remove, 'w').close()
+        trie['ab'] = ['bar']
+        assert_true(os.path.exists(to_keep), "no file which had to be kept")
+        assert_false(os.path.exists(to_remove), "file was not removed")
+        del trie['ab']
+        assert_false(os.path.exists(key_ab), "empty key kept")
