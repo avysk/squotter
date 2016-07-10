@@ -175,30 +175,23 @@ class Test(object):
                              _fail)
 
     def unsupported_method_test(self):
-        """Test that FileReactor raises exception for unsupported method."""
+        """
+        Test that FileReactor raises exception for unsupported method.
+
+        Windows-only.
+        """
         # pylint: disable=no-self-use
-        def _fail(method):
-            def _callable(method=method):
-                link = None
-                link_patched = False
-                try:
-                    if hasattr(os, method):
-                        link = getattr(os, method)
-                        delattr(os, method)
-                        link_patched = True
-                    return FileReactor('', method=method)
-                except:
-                    if link_patched:
-                        os.link = link
-                    raise
-            return _callable
+
+        if sys.platform != 'win32':
+            assert True
+            return
 
         assert_raises_regexp(ValueError,
                              r"^hardlink is not supported on this platform.",
-                             _fail('hardlink'))
+                             lambda: FileReactor('', method='hardlink'))
         assert_raises_regexp(ValueError,
                              r"^symlink is not supported on this platform.",
-                             _fail('symlink'))
+                             lambda: FileReactor('', method='symlink'))
 
     def improper_root_test(self):
         """Test that FileReactor raises exception for bad root directory."""
